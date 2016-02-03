@@ -1,0 +1,15 @@
+{
+    "architecture": "@CLICK_ARCH@",
+    "description": "A simple Unity scope written in JavaScript",
+    "framework": "ubuntu-sdk-15.04",
+    "hooks": {
+        "freesound": {
+            "apparmor": "freesound.apparmor",
+            "scope": "freesound"
+        }
+    },
+    "maintainer": "Ricardo Silva <ricardo.garcia.silva@gmail.com>",
+    "name": "freesound.rgsilva",
+    "title": "freesound",
+    "version": "0.1"
+}
