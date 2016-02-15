@@ -25,8 +25,30 @@ execute_process(
 
 # Install the manifest and apparmor files
 configure_file(manifest.json.in ${CMAKE_CURRENT_BINARY_DIR}/manifest.json)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION "/")
-install(FILES "freesound.apparmor" DESTINATION "/")
+
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound.apparmor" DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound-account-plugin.apparmor" DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound.service" DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound.application" DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound.provider" DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install(FILES "freesound_provider_plugin.qml" DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
+        "freesound.apparmor"
+        "freesound-account-plugin.apparmor"
+        "freesound.service"
+        "freesound.application"
+        "freesound.provider"
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+
+install(
+    DIRECTORY "qml-plugin"
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
 
 # Make these files show up in QtCreator
 file(GLOB_RECURSE
@@ -39,6 +61,12 @@ add_custom_target(hidden_files
   SOURCES
     manifest.json.in
     freesound.apparmor
+    freesound-account-plugin.apparmor
+    freesound.service
+    freesound.application
+    freesound.provider
+    qml-plugin/Main.qml
+    #freesound_provider_plugin.qml
     src/data/freesound.ini.in
     src/data/freesound-settings.ini.in
     po/POTFILES.in.in

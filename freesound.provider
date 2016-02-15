@@ -1,0 +1,20 @@
+<provider>
+  <name>Freesound</name>
+  <icon>icon.png</icon>
+  <description>Access the freesound.org services</description>
+  <template>
+      <group name="auth">
+          <setting name="method">oauth2</setting>
+          <setting name="mechanism">web_server</setting>
+          <group name="oauth2">
+              <group name="web_server">
+                  <setting name="Host">www.freesound.org</setting>
+                  <setting name="AuthPath">/apiv2/oauth2/authorize/</setting>
+                  <setting name="ResponseType">code</setting>
+                  <setting name="ClientId">29001a76da1a12269b17637541b56f07af1cdda2</setting>
+                  <setting name="RedirectUri">/apiv2/oauth2/authorize/</setting>
+              </group>
+          </group>
+      </group>
+  </template>
+</provider>

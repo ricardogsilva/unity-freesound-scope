@@ -18,3 +18,13 @@
 #defaultValue = true
 #_displayName = Show Forecast
 
+[resultsPerCategory]
+type = list
+_displayName = Results per Category
+_displayValues = 3;15;30;45
+defaultValue = 0
+
+[nearbyRadius]
+type = number
+_displayName = Spatial radius for nearby searches (in km)
+defaultValue = 30

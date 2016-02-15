@@ -5,7 +5,14 @@
     "hooks": {
         "freesound": {
             "apparmor": "freesound.apparmor",
-            "scope": "freesound"
+            "scope": "freesound",
+            "account-application": "freesound.application",
+            "account-service": "freesound.service"
+        },
+        "freesound-account-plugin": {
+            "apparmor": "freesound-account-plugin.apparmor",
+            "account-provider": "freesound.provider",
+            "account-qml-plugin": "qml-plugin"
         }
     },
     "maintainer": "Ricardo Silva <ricardo.garcia.silva@gmail.com>",

@@ -2,12 +2,54 @@ var scopes = require('unity-js-scopes')
 var http = require('http');
 var url = require('url');
 
-var freesound_host = "www.freesound.org";
-var freesound_api_key = "insert_your_API_key_here";
-var freesound_page_size = 2;
-var text_search_path = '/apiv2/search/text/';
+var FREESOUND_HOST = "www.freesound.org";
+var TEXT_SEARCH_PATH = '/apiv2/search/text/';
+var FREESOUND_API_KEY = "29001a76da1a12269b17637541b56f07af1cdda2";
 
-var LATEST_SOUNDS_CATEGORY_DEFINITION = {
+// Fields returned by the freesound API for each sample
+// For more info check the API docs at:
+// http://freesound.org/docs/api/resources_apiv2.html#sound-resources
+var SOUND_INSTANCE_FIELDS = [
+    "id",
+    "url",
+    "name",
+    "license",  // maybe this is not needed
+    "description",
+    "created",
+    "duration",
+    "download",
+    "previews",
+    "images",
+    "avg_rating",
+].toString();
+
+// A curated selection of the most used tags on Freesound.org
+var TAGS = [
+    "ambience", "atmosphere",
+    "bass", "beat", "birds",
+    "city", "car",
+    "door", "drum",
+    "electronic",
+    "female", "field-recording", "foley",
+    "guitar",
+    "hit", "horror",
+    "loop",
+    "machine", "music",
+    "nature", "noise",
+    "synth",
+    "techno", "thunder", "traffic",
+    "voice",
+    "water", "weird", "wind",
+];
+
+var AVAILABLE_PAGE_SIZES = {
+    0: 3,
+    1: 15,
+    2: 30,
+    3: 45
+};
+
+var NEWEST_SOUNDS_CATEGORY_DEFINITION = {
     "schema-version": 1,
     "template": {
         "category-layout": "grid",
@@ -26,6 +68,210 @@ var LATEST_SOUNDS_CATEGORY_DEFINITION = {
     }
 };
 
+var MOST_DOWNLOADED_CATEGORY_DEFINITION = {
+    "schema-version": 1,
+    "template": {
+        "category-layout": "grid",
+        "card-size": "small",
+        "quick-preview-type": "audio",
+    },
+    "components": {
+        "title": "title",
+        "art": {
+            "field": "art"
+        },
+        "subtitle": "description",
+        "quick-preview-data": {
+            "field": "audio_preview",
+        }
+    }
+};
+
+var NEARBY_SOUNDS_CATEGORY_DEFINITION = {
+    "schema-version": 1,
+    "template": {
+        "category-layout": "grid",
+        "card-size": "small",
+        "quick-preview-type": "audio",
+    },
+    "components": {
+        "title": "title",
+        "art": {
+            "field": "art"
+        },
+        "subtitle": "description",
+        "quick-preview-data": {
+            "field": "audio_preview",
+        }
+    }
+};
+
+var CategoryRenderer = function(search_reply, page_size, active_department) {
+    var self = this;
+    var newest_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(NEWEST_SOUNDS_CATEGORY_DEFINITION));
+    var nearby_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(NEARBY_SOUNDS_CATEGORY_DEFINITION));
+    var most_downloaded_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(MOST_DOWNLOADED_CATEGORY_DEFINITION));
+
+    self.search_reply = search_reply;
+    self.page_size = page_size;
+    self.active_department = active_department;
+
+    // categories only show up in the scopes GUI after we push results to them
+    self.categories = {
+        "newest": search_reply.register_category("newest", "Newest sounds",
+                                                 "", newest_renderer),
+        "nearby": search_reply.register_category("nearby", "Nearby sounds",
+                                                 "", nearby_renderer),
+        "most_downloaded": search_reply.register_category("most_downloaded",
+                                                          "Most downloaded sounds",
+                                                          "",
+                                                          most_downloaded_renderer),
+    }
+
+    // buffer incoming results so that we can ensure the correct order of display
+    self.buffer = [];
+}
+
+CategoryRenderer.prototype.render_result = function(result, category_id) {
+    var self = this;
+    var categorised_result = new scopes.lib.CategorisedResult(self.categories[category_id]);
+    categorised_result.set_uri(result.id.toString());
+    categorised_result.set_title(result.name);
+    categorised_result.set('license', result.license);
+    categorised_result.set('description', result.description);
+    categorised_result.set('art', result.images.waveform_l);
+    categorised_result.set('audio_preview', result.previews["preview-lq-mp3"]);
+    categorised_result.set('all', result);
+    self.search_reply.push(categorised_result);
+}
+
+CategoryRenderer.prototype.retrieve_newest_sounds = function(canned_query, metadata) {
+    var self = this;
+    var search_callback = function(response) {
+        var res = "";
+        response.on("data", function(chunk) {
+            res += chunk;
+        });
+        response.on("end", function() {
+            var r = JSON.parse(res);
+            //console.log(r);
+            r.results.forEach(function(item, index, array) {
+                self.render_result(item, "newest");
+            });
+        });
+    };
+    var query_filter = "";
+    if (self.active_department !== "") {
+        query_filter += " tag:" + self.active_department;
+    };
+    var request_url = build_url({
+        query_string: canned_query.query_string(),
+        page_size: self.page_size,
+        sort: "created_desc",
+        filter: query_filter,
+    });
+    console.log("retreive_newest_sounds generated URL: " + request_url);
+    http.request(request_url, search_callback).end();
+};
+
+CategoryRenderer.prototype.retrieve_nearby_sounds = function(canned_query, metadata) {
+    var self = this;
+    var search_callback = function(response) {
+        var res = "";
+        response.on("data", function(chunk) {
+            res += chunk;
+        });
+        response.on("end", function() {
+            var r = JSON.parse(res);
+            //console.log(r);
+            r.results.forEach(function(item, index, array) {
+                self.render_result(item, "nearby");
+            });
+        });
+    };
+
+    // TODO: get coordinates from the GPS of the device
+    var lat = 0;
+    var lon = 0;
+    var radius = scopes.self.settings["nearbyRadius"].get_double();
+
+    var query_filter = "{!geofilt sfield=geotag pt=" + lat + "," + lon + " d=" + radius + "}";
+    if (self.active_department !== "") {
+        query_filter += " tag:" + self.active_department;
+    };
+    var request_url = build_url({
+        query_string: canned_query.query_string(),
+        page_size: self.page_size,
+        filter: query_filter,
+    });
+    console.log("retrieve_nearby_sounds generated URL: " + request_url);
+    http.request(request_url, search_callback).end();
+};
+
+CategoryRenderer.prototype.retrieve_most_downloaded_sounds = function(canned_query, metadata) {
+    var self = this;
+    var search_callback = function(response) {
+        var res = "";
+        response.on("data", function(chunk) {
+            res += chunk;
+        });
+        response.on("end", function() {
+            var r = JSON.parse(res);
+            //console.log(r);
+            r.results.forEach(function(item, index, array){
+                self.render_result(item, "most_downloaded");
+            });
+        });
+    };
+
+    var query_filter = "";
+    if (self.active_department !== "") {
+        query_filter += " tag:" + self.active_department;
+    };
+    var request_url = build_url({
+        query_string: canned_query.query_string(),
+        page_size: self.page_size,
+        sort: "downloads_desc",
+        filter: query_filter,
+    });
+    console.log("retrieve_most_downloaded_sounds generated URL: " + request_url);
+    http.request(request_url, search_callback).end();
+};
+
+var build_url = function(options) {
+    var page_size = options.page_size || 0;
+    var query_string = options.query_string || "";
+    var protocol = options.protocol || "http";
+
+    var query = {
+        token: FREESOUND_API_KEY,
+        fields: SOUND_INSTANCE_FIELDS,
+        page_size: page_size,
+        query: query_string,
+    }
+    if (options.filter) {
+        query["filter"] = options.filter;
+    };
+    if (options.sort) {
+        query["sort"] = options.sort;
+    };
+    console.log("*****")
+    console.log("query to send:")
+    for (var item in query) {
+        console.log(item +": " + query[item])
+    };
+    console.log("*****")
+    var request_url = url.format({
+        protocol: protocol,
+        hostname: FREESOUND_HOST,
+        pathname: TEXT_SEARCH_PATH,
+        query: query,
+    });
+    return request_url
+};
+
+
+
 scopes.self.initialize({}, {
     start: function(scope_id) {
         console.log('Starting scope id: '
@@ -40,67 +286,38 @@ scopes.self.initialize({}, {
 
     search: function(canned_query, metadata) {
         var run_search_cb = function(search_reply) {
-            current_text_search_cb = function(response) {
-                var res = "";
-                response.on("data", function(chunk) {
-                    res += chunk;
-                });
-                response.on("end", function() {
-                    var r = JSON.parse(res);
-                    console.log(r);
-                    var category_renderer = new scopes.lib.CategoryRenderer(
-                        JSON.stringify(LATEST_SOUNDS_CATEGORY_DEFINITION));
-                    var category = search_reply.register_category(
-                        'latest', 'latest sounds',
-                        '', category_renderer
-                    );
-                    for (var i=0; i < r.results.length; i++) {
-                        var item = r.results[i]
-                        var sound_instance_url = url.format({
-                            protocol: 'http',
-                            hostname: freesound_host,
-                            pathname: 'apiv2/sounds/' + item.id + '/',
-                            query: {
-                                token: freesound_api_key,
-                                page_size: freesound_page_size,
-                            }
-                        });
-                        console.log('sound_instance_url: ' + sound_instance_url);
-                        http.request(sound_instance_url, function(response) {
-                            var res = '';
-                            response.on("data", function(chunk) {
-                                res += chunk;
-                            });
-                            response.on("end", function() {
-                                var sound_item = JSON.parse(res);
-                                var categorised_result = new scopes.lib.CategorisedResult(category);
-                                console.log('response: ' + JSON.stringify(sound_item));
-                                categorised_result.set_uri(sound_item.id.toString());
-                                categorised_result.set_title(sound_item.name);
-                                categorised_result.set('license', sound_item.license);
-                                categorised_result.set('description', sound_item.description);
-                                categorised_result.set('tags', sound_item.tags);
-                                categorised_result.set('art', sound_item.images.waveform_l);
-                                categorised_result.set('audio_preview', sound_item.previews["preview-lq-mp3"]);
-                                categorised_result.set('all', sound_item);
-                                search_reply.push(categorised_result);
-                            });
-                        }).end();
-                    }
-                    //search_reply.finished();
-                });
-            }
-            var request_url = url.format({
-                protocol: 'http',
-                hostname: freesound_host,
-                pathname: text_search_path,
-                query: {
-                    token: freesound_api_key,
-                    page_size:freesound_page_size,
-                    query: canned_query.query_string()
-                },
+            var root_department = new scopes.lib.Department("", canned_query,
+                                                            "All samples");
+            TAGS.forEach(function(item, index, array) {
+                var sub_department = new scopes.lib.Department(item, canned_query, item);
+                root_department.add_subdepartment(sub_department);
             });
-            http.request(request_url, current_text_search_cb).end();
+            search_reply.register_departments(root_department);
+            console.log("metadata:");
+            for (var item in metadata) {
+                console.log(item + ": " + metadata[item])
+            }
+            console.log("canned_query:");
+            for (var item in canned_query) {
+                console.log(item + ": " + canned_query[item])
+            }
+            console.log("metadata.has_location: " + metadata.has_location());
+            console.log("canned_query.department_id: " + canned_query.department_id());
+            console.log("canned_query.department_id == '' " + canned_query.department_id() == '');
+
+            var page_size_setting = scopes.self.settings["resultsPerCategory"].get_int();
+            var page_size = AVAILABLE_PAGE_SIZES[page_size_setting];
+
+            var freesound_searcher = new CategoryRenderer(search_reply,
+                                                          page_size,
+                                                          canned_query.department_id());
+
+            var active_department = canned_query.department_id();
+
+            freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
+            freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
+            freesound_searcher.retrieve_nearby_sounds(canned_query, metadata);
+            //search_reply.finished();
         };
 
         var cancel_search_cb = function() {};
@@ -113,7 +330,7 @@ scopes.self.initialize({}, {
         var run_preview_cb = function(preview_reply) {
             // layout definition for a screen with only one column
             var layout1col = new scopes.lib.ColumnLayout(1);
-            layout1col.add_column(["image", "header", "description", "audio"]);
+            layout1col.add_column(["image", "header", "description", "details", "audio"]);
 
             // layout definition for a screen with two columns
             var layout2col = new scopes.lib.ColumnLayout(2);
@@ -129,10 +346,26 @@ scopes.self.initialize({}, {
             header.add_attribute_mapping("title", "title")
             header.add_attribute_mapping("subtitle", "license")
 
+            //var scope_dir = scopes.self.scope_directory;
+            //var cc_image_path = scope_dir + "/by.large.png";
+            //header.add_attribute_value("mascot", "file:///" + cc_image_path);
+
+            console.log("scope_directory: " + scopes.self.scope_directory);
+
             var description = new scopes.lib.PreviewWidget("description",
                                                            "text");
             description.add_attribute_mapping("text", "description");
 
+            var details = new scopes.lib.PreviewWidget("details", "table");
+            details.add_attribute_value("title", "Details");
+            details.add_attribute_value(
+                "values",
+                [
+                    ["type", result.get("type")],
+                    ["channels", result.get("channels")],
+                    ["filesize", result.get("filesize")],
+                ]
+            );
             var audio = new scopes.lib.PreviewWidget("audio", "audio");
             audio.add_attribute_value(
                 "tracks",
@@ -142,7 +375,7 @@ scopes.self.initialize({}, {
                 }
             );
 
-            preview_reply.push([image, header, description, audio]);
+            preview_reply.push([image, header, description, details, audio]);
             preview_reply.finished();
         };
         var cancel_preview_cb = function() {};

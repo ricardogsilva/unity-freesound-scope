@@ -1,0 +1,5 @@
+<service>
+  <type>freesound-freesound</type>
+  <provider>freesound.rgsilva_freesound</provider>
+  <name>Freesound</name>
+</service>
