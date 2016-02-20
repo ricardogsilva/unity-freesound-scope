@@ -1,7 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <provider>
   <name>Freesound</name>
-  <icon>icon.png</icon>
+  <icon>freesound/icon.png</icon>
   <description>Access the freesound.org services</description>
+  <plugin>generic-oauth</plugin>
+  <!--<single-account>true</single-account>-->
   <template>
       <group name="auth">
           <setting name="method">oauth2</setting>
@@ -10,9 +13,12 @@
               <group name="web_server">
                   <setting name="Host">www.freesound.org</setting>
                   <setting name="AuthPath">/apiv2/oauth2/authorize/</setting>
+                  <setting name="TokenPath">/apiv2/oauth2/access_token/</setting>
+                  <setting name="ClientId">c0d8999c8697231ff786</setting>
+                  <setting name="ClientSecret">29001a76da1a12269b17637541b56f07af1cdda2</setting>
+                  <setting name="RedirectUri">https://wiki.ubuntu.com</setting>
                   <setting name="ResponseType">code</setting>
-                  <setting name="ClientId">29001a76da1a12269b17637541b56f07af1cdda2</setting>
-                  <setting name="RedirectUri">/apiv2/oauth2/authorize/</setting>
+                  <setting type="as" name="AllowedSchemes">['https']</setting>
               </group>
           </group>
       </group>

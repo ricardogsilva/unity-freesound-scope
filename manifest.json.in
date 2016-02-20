@@ -1,7 +1,9 @@
 {
-    "architecture": "@CLICK_ARCH@",
+    "title": "freesound",
+    "version": "0.1",
     "description": "A simple Unity scope written in JavaScript",
     "framework": "ubuntu-sdk-15.04",
+    "architecture": "@CLICK_ARCH@",
     "hooks": {
         "freesound": {
             "apparmor": "freesound.apparmor",
@@ -9,14 +11,12 @@
             "account-application": "freesound.application",
             "account-service": "freesound.service"
         },
-        "freesound-account-plugin": {
-            "apparmor": "freesound-account-plugin.apparmor",
+        "freesoundaccount": {
+            "apparmor": "freesound-account.apparmor",
             "account-provider": "freesound.provider",
-            "account-qml-plugin": "qml-plugin"
+            "account-qml-plugin": "freesound-qmlplugin"
         }
     },
     "maintainer": "Ricardo Silva <ricardo.garcia.silva@gmail.com>",
-    "name": "freesound.rgsilva",
-    "title": "freesound",
-    "version": "0.1"
+    "name": "freesound.rgsilva"
 }

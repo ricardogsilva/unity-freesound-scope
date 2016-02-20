@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service>
+  <type>freesound-scope</type>
+  <name>Freesound</name>
+  <icon>freesound/icon.png</icon>
+  <provider>freesound.rgsilva_freesoundaccount</provider>
+</service>

@@ -24,29 +24,39 @@ execute_process(
 )
 
 # Install the manifest and apparmor files
-configure_file(manifest.json.in ${CMAKE_CURRENT_BINARY_DIR}/manifest.json)
+configure_file(
+    manifest.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/manifest.json
+)
 
-#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound.apparmor" DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound-account-plugin.apparmor" DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound.service" DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound.application" DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound.provider" DESTINATION ${CMAKE_INSTALL_PREFIX})
-#install(FILES "freesound_provider_plugin.qml" DESTINATION ${CMAKE_INSTALL_PREFIX})
+configure_file(
+    application.in
+    freesound.application
+)
+
+configure_file(
+    service.in
+    freesound.service
+)
+
+configure_file(
+    provider.in
+    freesound.provider
+)
 
 install(
     FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
         "freesound.apparmor"
-        "freesound-account-plugin.apparmor"
-        "freesound.service"
-        "freesound.application"
-        "freesound.provider"
+        "freesound-account.apparmor"
+        "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
+        "${CMAKE_CURRENT_BINARY_DIR}/freesound.service"
+        "${CMAKE_CURRENT_BINARY_DIR}/freesound.application"
+        "${CMAKE_CURRENT_BINARY_DIR}/freesound.provider"
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
 install(
-    DIRECTORY "qml-plugin"
+    DIRECTORY "freesound-qmlplugin"
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
@@ -61,12 +71,11 @@ add_custom_target(hidden_files
   SOURCES
     manifest.json.in
     freesound.apparmor
-    freesound-account-plugin.apparmor
-    freesound.service
-    freesound.application
-    freesound.provider
-    qml-plugin/Main.qml
-    #freesound_provider_plugin.qml
+    freesound-account.apparmor
+    service.in
+    application.in
+    provider.in
+    freesound-qmlplugin/Main.qml
     src/data/freesound.ini.in
     src/data/freesound-settings.ini.in
     po/POTFILES.in.in

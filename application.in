@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <application>
   <description>Freesound scope</description>
-  <desktop-entry>freesound.desktop</desktop-entry>
+  <desktop-entry>freesound.rgsilva_freesound</desktop-entry>
   <services>
     <service id="freesound.rgsilva_freesound">
       <description>Access freesound.org services</description>
