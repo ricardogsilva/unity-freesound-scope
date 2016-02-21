@@ -53,7 +53,8 @@ var NEWEST_SOUNDS_CATEGORY_DEFINITION = {
     "schema-version": 1,
     "template": {
         "category-layout": "grid",
-        "card-size": "small",
+        "card-layout": "horizontal",
+        "card-size": "large",
         "quick-preview-type": "audio",
     },
     "components": {
@@ -63,7 +64,7 @@ var NEWEST_SOUNDS_CATEGORY_DEFINITION = {
         },
         "subtitle": "description",
         "quick-preview-data": {
-            "field": "audio_preview",
+            "field": "quick_preview",
         }
     }
 };
@@ -72,6 +73,7 @@ var MOST_DOWNLOADED_CATEGORY_DEFINITION = {
     "schema-version": 1,
     "template": {
         "category-layout": "grid",
+        "card-layout": "horizontal",
         "card-size": "small",
         "quick-preview-type": "audio",
     },
@@ -82,7 +84,7 @@ var MOST_DOWNLOADED_CATEGORY_DEFINITION = {
         },
         "subtitle": "description",
         "quick-preview-data": {
-            "field": "audio_preview",
+            "field": "quick_preview",
         }
     }
 };
@@ -91,6 +93,7 @@ var NEARBY_SOUNDS_CATEGORY_DEFINITION = {
     "schema-version": 1,
     "template": {
         "category-layout": "grid",
+        "card-layout": "horizontal",
         "card-size": "small",
         "quick-preview-type": "audio",
     },
@@ -101,7 +104,7 @@ var NEARBY_SOUNDS_CATEGORY_DEFINITION = {
         },
         "subtitle": "description",
         "quick-preview-data": {
-            "field": "audio_preview",
+            "field": "quick_preview",
         }
     }
 };
@@ -141,6 +144,13 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     categorised_result.set('description', result.description);
     categorised_result.set('art', result.images.waveform_l);
     categorised_result.set('audio_preview', result.previews["preview-lq-mp3"]);
+    categorised_result.set(
+        'quick_preview',
+        {
+            "uri": result.previews["preview-lq-mp3"],
+            "duration": result.duration
+        }
+    );
     categorised_result.set('all', result);
     self.search_reply.push(categorised_result);
 }
@@ -311,6 +321,12 @@ scopes.self.initialize({}, {
             var freesound_searcher = new CategoryRenderer(search_reply,
                                                           page_size,
                                                           canned_query.department_id());
+            //service_name, service_type, provider_name
+            //var online_accounts_client = new scopes.lib.OnlineAccountClient(
+            //    "freesound.rgsilva_freesound",
+            //    "freesound-scope",
+            //    "freesound.rgsilva_freesound"
+            //);
 
             var active_department = canned_query.department_id();
 

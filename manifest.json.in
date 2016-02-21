@@ -2,7 +2,7 @@
     "title": "freesound",
     "version": "0.1",
     "description": "A simple Unity scope written in JavaScript",
-    "framework": "ubuntu-sdk-15.04",
+    "framework": "ubuntu-sdk-15.04.1",
     "architecture": "@CLICK_ARCH@",
     "hooks": {
         "freesound": {
@@ -18,5 +18,6 @@
         }
     },
     "maintainer": "Ricardo Silva <ricardo.garcia.silva@gmail.com>",
-    "name": "freesound.rgsilva"
+    "name": "freesound.rgsilva",
+    "icon": "icon.png"
 }
