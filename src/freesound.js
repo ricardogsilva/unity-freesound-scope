@@ -23,6 +23,7 @@ var SOUND_INSTANCE_FIELDS = [
     "previews",
     "images",
     "avg_rating",
+    "username",
 ].toString();
 
 // A curated selection of the most used tags on Freesound.org
@@ -123,6 +124,7 @@ var CategoryRenderer = function(search_reply, page_size) {
 
     self.search_reply = search_reply;
     self.page_size = page_size;
+    self.location_enabled = false;
 
     // categories only show up in the scopes GUI after we push results to them
     self.categories = {
@@ -144,11 +146,11 @@ var CategoryRenderer = function(search_reply, page_size) {
     // 2. most_downloaded
     // 3. nearby
     self.next_gui_category = "newest";
-    self.number_of_newest = 0;
+    self.number_of_newest = null;
+    self.number_of_nearby = null;
+    self.number_of_most_downloaded = null;
     self.rendered_newest = 0;
-    self.number_of_nearby = 0;
     self.rendered_nearby = 0;
-    self.number_of_most_downloaded = 0;
     self.rendered_most_downloaded = 0;
 }
 util.inherits(CategoryRenderer, EventEmitter);
@@ -159,7 +161,7 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     var categorised_result = new scopes.lib.CategorisedResult(self.categories[category_id]);
     categorised_result.set_uri(result.id.toString());
     categorised_result.set_title(result.name);
-    categorised_result.set('license', result.license);
+    categorised_result.set('username', result.username);
     categorised_result.set('description', result.description);
     categorised_result.set('art', result.images.waveform_l);
     categorised_result.set('audio_preview', result.previews["preview-lq-mp3"]);
@@ -250,7 +252,7 @@ CategoryRenderer.prototype.retrieve_newest_sounds = function(canned_query, metad
 };
 
 
-CategoryRenderer.prototype.retrieve_nearby_sounds = function(canned_query, metadata) {
+CategoryRenderer.prototype.retrieve_nearby_sounds = function(canned_query, location) {
     var self = this;
     var search_callback = function(response) {
         var res = "";
@@ -266,9 +268,8 @@ CategoryRenderer.prototype.retrieve_nearby_sounds = function(canned_query, metad
         });
     };
 
-    // TODO: get coordinates from the GPS of the device
-    var lat = 0;
-    var lon = 0;
+    var lat = location.latitude();
+    var lon = location.longitude();
     var radius = scopes.self.settings["nearbyRadius"].get_double();
 
     var active_department = canned_query.department_id();
@@ -370,17 +371,6 @@ scopes.self.initialize({}, {
                 root_department.add_subdepartment(sub_department);
             });
             search_reply.register_departments(root_department);
-            console.log("metadata:");
-            for (var item in metadata) {
-                console.log(item + ": " + metadata[item])
-            }
-            console.log("canned_query:");
-            for (var item in canned_query) {
-                console.log(item + ": " + canned_query[item])
-            }
-            console.log("metadata.has_location: " + metadata.has_location());
-            console.log("canned_query.department_id: " + canned_query.department_id());
-            console.log("canned_query.department_id == '' " + canned_query.department_id() == '');
 
             var page_size_setting = scopes.self.settings["resultsPerCategory"].get_int();
             var page_size = AVAILABLE_PAGE_SIZES[page_size_setting];
@@ -388,19 +378,17 @@ scopes.self.initialize({}, {
             var freesound_searcher = new CategoryRenderer(search_reply, page_size);
             freesound_searcher.on("renderedResult", function() {
                 var self = this;
-                //self.try_to_finish_search_reply();
-                console.log("self.number_of_newest: " + self.number_of_newest);
-                console.log("self.rendered_newest: " + self.rendered_newest);
-                console.log("self.number_of_nearby: " + self.number_of_nearby);
-                console.log("self.rendered_nearby: " + self.rendered_nearby);
-                console.log("self.number_of_most_downloaded: " + self.number_of_most_downloaded);
-                console.log("self.rendered_most_downloaded: " + self.rendered_most_downloaded);
-                if (self.number_of_newest > 0 && self.number_of_newest === self.rendered_newest) {
-                    // all newest have been rendered
-                    if (self.number_of_most_downloaded > 0 && self.number_of_most_downloaded === self.rendered_most_downloaded) {
-                        // all most_downloaded have been rendered
-                        if (self.number_of_nearby === self.rendered_nearby) {
-                            // all nearby have been rendered (or there are none)
+                if (self.rendered_newest === self.number_of_newest) {
+                    console.log("all newest have been rendered");
+                    if (self.rendered_most_downloaded === self.number_of_most_downloaded) {
+                        console.log("all most_downloaded have been rendered");
+                        if (self.location_enabled) {
+                            if (self.rendered_nearby === self.number_of_nearby) {
+                                console.log("all nearby have been rendered (or there are none)");
+                                console.log("setting search_reply.finished()");
+                                self.search_reply.finished();
+                            }
+                        } else {
                             self.search_reply.finished();
                         }
                     }
@@ -415,7 +403,12 @@ scopes.self.initialize({}, {
 
             freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
             freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
-            freesound_searcher.retrieve_nearby_sounds(canned_query, metadata);
+            console.log("metadata.has_location: " + metadata.has_location());
+            if (metadata.has_location()) {
+                var location = metadata.location();
+                freesound_searcher.location_enabled = true;
+                freesound_searcher.retrieve_nearby_sounds(canned_query, location);
+            }
             //search_reply.finished();
         };
 
@@ -428,26 +421,40 @@ scopes.self.initialize({}, {
     preview: function(result, action_metadata) {
         var run_preview_cb = function(preview_reply) {
             // layout definition for a screen with only one column
-            var layout1col = new scopes.lib.ColumnLayout(1);
-            layout1col.add_column(["image", "header", "description", "details", "audio"]);
+            var layout_1_col = new scopes.lib.ColumnLayout(1);
+            layout_1_col.add_column(["image",
+                                     "header",
+                                     "audio",
+                                     "description",
+                                     "details"]);
 
             // layout definition for a screen with two columns
-            var layout2col = new scopes.lib.ColumnLayout(2);
-            layout2col.add_column(["image"]);
-            layout2col.add_column(["header", "description", "audio"]);
+            var layout_2_col = new scopes.lib.ColumnLayout(2);
+            layout_2_col.add_column(["image",
+                                     "header",
+                                     "audio",
+                                     "description"]);
+            layout_2_col.add_column([]);
 
-            preview_reply.register_layout([layout1col, layout2col]);
+            // layout definition for a screen with three columns
+            var layout_3_col = new scopes.lib.ColumnLayout(3);
+            layout_3_col.add_column(["image",
+                                     "header",
+                                     "audio",
+                                     "description"]);
+            layout_3_col.add_column([]);
+            layout_3_col.add_column([]);
+
+            preview_reply.register_layout([layout_1_col,
+                                           layout_2_col,
+                                           layout_3_col]);
 
             var image = new scopes.lib.PreviewWidget("image", "image");
             image.add_attribute_mapping("source", "art");
 
             var header = new scopes.lib.PreviewWidget("header", "header");
             header.add_attribute_mapping("title", "title")
-            header.add_attribute_mapping("subtitle", "license")
-
-            //var scope_dir = scopes.self.scope_directory;
-            //var cc_image_path = scope_dir + "/by.large.png";
-            //header.add_attribute_value("mascot", "file:///" + cc_image_path);
+            header.add_attribute_mapping("subtitle", "username")
 
             console.log("scope_directory: " + scopes.self.scope_directory);
 
@@ -474,7 +481,7 @@ scopes.self.initialize({}, {
                 }
             );
 
-            preview_reply.push([image, header, description, details, audio]);
+            preview_reply.push([image, header, audio, description, details]);
             preview_reply.finished();
         };
         var cancel_preview_cb = function() {};

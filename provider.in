@@ -16,7 +16,7 @@
                   <setting name="TokenPath">/apiv2/oauth2/access_token/</setting>
                   <setting name="ClientId">c0d8999c8697231ff786</setting>
                   <setting name="ClientSecret">29001a76da1a12269b17637541b56f07af1cdda2</setting>
-                  <setting name="RedirectUri">https://wiki.ubuntu.com</setting>
+                  <setting name="RedirectUri">https://www.freesound.org/home/app_permissions/permission_granted/</setting>
                   <setting name="ResponseType">code</setting>
                   <setting type="as" name="AllowedSchemes">['https']</setting>
               </group>

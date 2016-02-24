@@ -4,6 +4,7 @@ _DisplayName=Freesound Scope
 _Description=This is a Freesound scope
 Author = Ricardo Silva <ricardo.garcia.silva@gmail.com>
 Icon = icon.png
+LocationDataNeeded = true
 
 [Appearance]
 PageHeader.Logo = logo.png
