@@ -144,7 +144,7 @@ var CategoryRenderer = function(search_reply, page_size) {
     // GUI order:
     // 1. newest
     // 2. most_downloaded
-    // 3. nearby
+    // 3. nearby (becomes disabled if the user does not enable location data)
     self.next_gui_category = "newest";
     self.number_of_newest = null;
     self.number_of_nearby = null;
@@ -174,6 +174,8 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     );
     categorised_result.set('all', result);
 
+    // these if blocks of code deal with buffering incoming results
+    // in order to ensure a consistent ordering of categories in the GUI
     if (category_id === "newest") {
         self.search_reply.push(categorised_result);
         self.rendered_newest += 1;
@@ -270,6 +272,9 @@ CategoryRenderer.prototype.retrieve_nearby_sounds = function(canned_query, locat
 
     var lat = location.latitude();
     var lon = location.longitude();
+    // TODO: try to get the city's name from the location info and
+    // use it as a search keyword in order to also get back results
+    // that are not geotagged.
     var radius = scopes.self.settings["nearbyRadius"].get_double();
 
     var active_department = canned_query.department_id();
@@ -388,18 +393,19 @@ scopes.self.initialize({}, {
                                 console.log("setting search_reply.finished()");
                                 self.search_reply.finished();
                             }
-                        } else {
+                        } else {  // location disabled by the user
                             self.search_reply.finished();
                         }
                     }
                 }
             })
             //service_name, service_type, provider_name
-            //var online_accounts_client = new scopes.lib.OnlineAccountClient(
+            //var online_account_client = new scopes.lib.OnlineAccountClient(
             //    "freesound.rgsilva_freesound",
             //    "freesound-scope",
             //    "freesound.rgsilva_freesound"
             //);
+            //console.log("online_account_client: " + online_account_client);
 
             freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
             freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
