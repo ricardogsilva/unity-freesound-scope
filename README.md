@@ -1,14 +1,14 @@
 # unity-freesound-scope
 A scope for ubuntu's unity8 that interacts with freesound.org
 
-## GENERAL REMARKS ON MISSING OR INCORRECT FUNCTIONALITY:
+## General remarks on missing or incorrect functionality
 
 There are some bugs in the javascript bindings that are currently
 available on the phone on the stable channels, namely:
 
 * Online accounts are totally broken (seems this was fixed already but not
   published yet) and therefore we are not shipping manifest files for
-  enabling them nor instnatiating them here
+  enabling them nor using them in the scope. See https://bugs.launchpad.net/unity-js-scopes/+bug/1549477
 
 * PreviewWidgets whose `add_attribute_value()` method is supposed to accept
   an array of objects do not work as documented. Instead they only accept
@@ -19,9 +19,7 @@ available on the phone on the stable channels, namely:
   * actions,
   * table,
 
-* PreviewWidgets of type _expandable_ do not work if they contain more than
-  one widget, which defeats the whole purpose of them being expandable in
-  the first place
+  See for example https://bugs.launchpad.net/unity-js-scopes/+bug/1541720
 
 * PreviewWidgets of type _review_ do not show up at all in the phone, while
   they work just fine on the desktop
