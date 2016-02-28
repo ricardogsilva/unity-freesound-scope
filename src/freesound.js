@@ -196,6 +196,7 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     categorised_result.set_title(result.name);
     categorised_result.set('url', result.url);
     categorised_result.set('download', result.download);
+    categorised_result.set('rating', result.avg_rating);
     categorised_result.set('username', result.username);
     categorised_result.set('description', result.description);
     categorised_result.set('art', result.images.waveform_l);
@@ -211,7 +212,6 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     categorised_result.set('created', result.created);
     categorised_result.set('license', result.license);
     categorised_result.set('pack', result.pack);
-    categorised_result.set('all', result);
 
     // these if blocks of code deal with buffering incoming results
     // in order to ensure a consistent ordering of categories in the GUI
@@ -464,11 +464,10 @@ scopes.self.initialize({}, {
                 "image_id",
                 "header_id",
                 "review_id",
-                "actions_id",
                 "audio_id",
+                "actions_id",
                 "details_id",
                 "description_id",
-                //"tags_id",
             ]);
 
             // layout definition for a screen with two columns
@@ -477,11 +476,10 @@ scopes.self.initialize({}, {
                 "image_id",
                 "header_id",
                 "review_id",
-                "actions_id",
                 "audio_id",
+                "actions_id",
                 "details_id",
                 "description_id",
-                //"tags_id",
             ]);
             layout_2_col.add_column([]);
 
@@ -491,11 +489,10 @@ scopes.self.initialize({}, {
                 "image_id",
                 "header_id",
                 "review_id",
-                "actions_id",
                 "audio_id",
+                "actions_id",
                 "details_id",
                 "description_id",
-                //"tags_id",
             ]);
             layout_3_col.add_column([]);
             layout_3_col.add_column([]);
@@ -520,15 +517,15 @@ scopes.self.initialize({}, {
             description_widget.add_attribute_mapping("text", "description");
 
             var audio_widget = new scopes.lib.PreviewWidget("audio_id", "audio");
-            // TODO: refactor this once the bug with add_attribute_value with
-            // an array has been fixed and published
             audio_widget.add_attribute_value(
                 "tracks",
-                {
-                     "title": result.get("title"),
-                     "source": result.get("quick_preview")["uri"],
-                     "length": Math.floor(result.get("quick_preview")["duration"]),
-                }
+                [
+                    {
+                        "title": result.get("title"),
+                        "source": result.get("quick_preview")["uri"],
+                        "length": Math.floor(result.get("quick_preview")["duration"]),
+                    }
+                ]
             );
 
             var reviews_widget = new scopes.lib.PreviewWidget("review_id", "reviews");
@@ -536,8 +533,8 @@ scopes.self.initialize({}, {
                 "reviews",
                 [
                     {
-                        author: "ricardo",
-                        rating: 3,
+                        author: "",
+                        rating: result.get("rating"),
                     },
                 ]
             )
@@ -548,20 +545,20 @@ scopes.self.initialize({}, {
             // TODO: refactor this once the bug with add_attribute_value with
             // an array has been fixed and published
             actions_widget.add_attribute_value("actions",
-                {
-                    "id": "open",
-                    "label": "Open on freesound.org",
-                    //"uri": result.get("url"),
-                }
+                [
+                    {
+                        "id": "open",
+                        "label": "Open on freesound.org",
+                        "uri": result.get("url"),
+                    },
+                    {
+                        "id": "download",
+                        "label": "Download",
+                        "uri": result.get("download"),
+                    },
+                ]
             );
 
-
-            //// details are:
-            //// * created
-            //// * license
-            //// * tags
-            //// * pack
-            //console.log("pack: " + result.get("pack"));
 
             var details_widget = new scopes.lib.PreviewWidget("details_id", "expandable");
             details_widget.add_attribute_value("title", "Details");
@@ -571,31 +568,26 @@ scopes.self.initialize({}, {
             license_widget.add_attribute_value("title", "License");
             license_widget.add_attribute_value("text", result.get("license"));
 
-            //var sample_tags = result.get("tags");
-            //console.log("sample_tags: " + sample_tags);
-            //console.log("sample_tags string: " + sample_tags.join("\n"));
-            //var tags_widget = new scopes.lib.PreviewWidget("tags_id", "text");
-            //tags_widget.add_attribute_value("title", "Tags");
-            //tags_widget.add_attribute_value("text", sample_tags.join(", "));
+            var tags_widget = new scopes.lib.PreviewWidget("tags_id", "text");
+            tags_widget.add_attribute_value("title", "Tags");
+            tags_widget.add_attribute_value("text", result.get("tags").join("\n"));
 
             var created_widget = new scopes.lib.PreviewWidget("created_id", "text");
             created_widget.add_attribute_value("title", "Created");
             created_widget.add_attribute_value("text", result.get("created"));
 
-
-
             details_widget.add_widget(license_widget);
-            //details_widget.add_widget(tags_widget);
+            details_widget.add_widget(tags_widget);
             details_widget.add_widget(created_widget);
 
             preview_reply.push([
                 image_widget,
                 header_widget,
+                reviews_widget,
                 audio_widget,
-                description_widget,
                 actions_widget,
                 details_widget,
-                reviews_widget,
+                description_widget,
             ]);
             preview_reply.finished();
         };
