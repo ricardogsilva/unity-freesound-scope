@@ -1,10 +1,12 @@
 [ScopeConfig]
 ScopeRunner=./node_modules/unity-js-scopes/bin/unity-js-scopes-launcher %S %R
-_DisplayName=Freesound Scope
-_Description=This is a Freesound scope
+_DisplayName=Freesound
+_Description=Discover sounds from freesound.org
 Author = Ricardo Silva <ricardo.garcia.silva@gmail.com>
 Icon = icon.png
 LocationDataNeeded = true
+Keywords=audio;nearby
+Art=screenshot.png
 
 [Appearance]
 PageHeader.Logo = logo.png

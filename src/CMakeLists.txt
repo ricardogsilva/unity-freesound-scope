@@ -21,6 +21,11 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/logo.png"
   @ONLY COPYONLY
 )
+configure_file(
+  "data/screenshot.png"
+  "${CMAKE_CURRENT_BINARY_DIR}/screenshot.png"
+  @ONLY COPYONLY
+)
 
 configure_file(
   "freesound.js"
@@ -42,6 +47,7 @@ install(
     "${CMAKE_CURRENT_BINARY_DIR}/${SCOPE_NAME}-settings.ini"
     "${CMAKE_CURRENT_BINARY_DIR}/icon.png"
     "${CMAKE_CURRENT_BINARY_DIR}/logo.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/screenshot.png"
     "${CMAKE_CURRENT_BINARY_DIR}/${SCOPE_NAME}.js"
   DESTINATION
     ${SCOPE_INSTALL_DIR}

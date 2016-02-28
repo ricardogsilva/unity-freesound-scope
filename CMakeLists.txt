@@ -29,36 +29,36 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/manifest.json
 )
 
-configure_file(
-    application.in
-    freesound.application
-)
+#configure_file(
+#    application.in
+#    freesound.application
+#)
 
-configure_file(
-    service.in
-    freesound.service
-)
+#configure_file(
+#    service.in
+#    freesound.service
+#)
 
-configure_file(
-    provider.in
-    freesound.provider
-)
+#configure_file(
+#    provider.in
+#    freesound.provider
+#)
 
 install(
     FILES
         "freesound.apparmor"
-        "freesound-account.apparmor"
+        #"freesound-account.apparmor"
         "${CMAKE_CURRENT_BINARY_DIR}/manifest.json"
-        "${CMAKE_CURRENT_BINARY_DIR}/freesound.service"
-        "${CMAKE_CURRENT_BINARY_DIR}/freesound.application"
-        "${CMAKE_CURRENT_BINARY_DIR}/freesound.provider"
+        #"${CMAKE_CURRENT_BINARY_DIR}/freesound.service"
+        #"${CMAKE_CURRENT_BINARY_DIR}/freesound.application"
+        #"${CMAKE_CURRENT_BINARY_DIR}/freesound.provider"
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
-install(
-    DIRECTORY "freesound-qmlplugin"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}
-)
+#install(
+#    DIRECTORY "freesound-qmlplugin"
+#    DESTINATION ${CMAKE_INSTALL_PREFIX}
+#)
 
 # Make these files show up in QtCreator
 file(GLOB_RECURSE

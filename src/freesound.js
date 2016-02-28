@@ -54,7 +54,6 @@ var SOUND_INSTANCE_FIELDS = [
     "download",
     "previews",
     "images",
-    "avg_rating",
     "username",
 ].toString();
 
@@ -378,12 +377,6 @@ var build_url = function(options) {
     if (options.sort) {
         query["sort"] = options.sort;
     };
-    console.log("*****")
-    console.log("query to send:")
-    for (var item in query) {
-        console.log(item +": " + query[item])
-    };
-    console.log("*****")
     var request_url = url.format({
         protocol: protocol,
         hostname: FREESOUND_HOST,
@@ -408,13 +401,9 @@ scopes.self.initialize({}, {
 
     search: function(canned_query, metadata) {
         var run_search_cb = function(search_reply) {
-            var root_department = new scopes.lib.Department("", canned_query,
-                                                            "All samples");
-            TAGS.forEach(function(item, index, array) {
-                var sub_department = new scopes.lib.Department(item, canned_query, item);
-                root_department.add_subdepartment(sub_department);
-            });
-            search_reply.register_departments(root_department);
+            console.log("is_aggregated: " + metadata.is_aggregated());
+            console.log("aggregated_keywords: " + metadata.aggregated_keywords());
+
 
             var page_size_setting = scopes.self.settings["resultsPerCategory"].get_int();
             var page_size = AVAILABLE_PAGE_SIZES[page_size_setting];
@@ -429,7 +418,6 @@ scopes.self.initialize({}, {
                         if (self.location_enabled) {
                             if (self.rendered_nearby === self.number_of_nearby) {
                                 console.log("all nearby have been rendered (or there are none)");
-                                console.log("setting search_reply.finished()");
                                 self.search_reply.finished();
                             }
                         } else {  // location disabled by the user
@@ -438,16 +426,37 @@ scopes.self.initialize({}, {
                     }
                 }
             })
-
-            freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
-            freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
-            console.log("metadata.has_location: " + metadata.has_location());
+            var location = undefined;
             if (metadata.has_location()) {
-                var location = metadata.location();
+                location = metadata.location();
                 freesound_searcher.location_enabled = true;
-                freesound_searcher.retrieve_nearby_sounds(canned_query, location);
             }
-            //search_reply.finished();
+
+            if (metadata.is_aggregated()) {
+                var keywords = metadata.aggregated_keywords();
+                if (keywords.indexOf("nearby.howdoyoufeel") !== -1) {
+                    if (freesound_searcher.location_enabled) {
+                        freesound_searcher.retrieve_nearby_sounds(canned_query, location);
+                    }
+                } else if (keywords.indexOf("audio") !== -1) {
+                    freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
+                }
+
+            } else {
+                // normal search, we are not being used by an aggregator scope
+                var root_department = new scopes.lib.Department("", canned_query,
+                                                                "All samples");
+                TAGS.forEach(function(item, index, array) {
+                    var sub_department = new scopes.lib.Department(item, canned_query, item);
+                    root_department.add_subdepartment(sub_department);
+                });
+                search_reply.register_departments(root_department);
+                freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
+                freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
+                if (freesound_searcher.location_enabled) {
+                    freesound_searcher.retrieve_nearby_sounds(canned_query, location);
+                }
+            }
         };
 
         var cancel_search_cb = function() {};
@@ -463,12 +472,10 @@ scopes.self.initialize({}, {
             layout_1_col.add_column([
                 "image_id",
                 "header_id",
-                "review_id",
-                "actions_id",
                 "audio_id",
-                "details_id",
+                "actions_id",
                 "description_id",
-                //"tags_id",
+                //"license_id",
             ]);
 
             // layout definition for a screen with two columns
@@ -476,12 +483,10 @@ scopes.self.initialize({}, {
             layout_2_col.add_column([
                 "image_id",
                 "header_id",
-                "review_id",
-                "actions_id",
                 "audio_id",
-                "details_id",
+                "actions_id",
                 "description_id",
-                //"tags_id",
+                //"license_id",
             ]);
             layout_2_col.add_column([]);
 
@@ -490,12 +495,10 @@ scopes.self.initialize({}, {
             layout_3_col.add_column([
                 "image_id",
                 "header_id",
-                "review_id",
-                "actions_id",
                 "audio_id",
-                "details_id",
+                "actions_id",
                 "description_id",
-                //"tags_id",
+                //"license_id",
             ]);
             layout_3_col.add_column([]);
             layout_3_col.add_column([]);
@@ -509,15 +512,18 @@ scopes.self.initialize({}, {
 
             var header_widget = new scopes.lib.PreviewWidget("header_id", "header");
             header_widget.add_attribute_mapping("title", "title")
-            //header_widget.add_attribute_mapping("subtitle", "username")
             header_widget.add_attribute_value("subtitle", "👤" + result.get("username"))
-
-            console.log("scope_directory: " + scopes.self.scope_directory);
 
             var description_widget = new scopes.lib.PreviewWidget("description_id",
                                                            "text");
-            description_widget.add_attribute_value("title", "Description");
-            description_widget.add_attribute_mapping("text", "description");
+            description_widget.add_attribute_value("title", "Details");
+
+            var description_text = "Created: " +
+                new Date(result.get("created")).toDateString() +
+                "\n\n" + result.get("description") +
+                "\n\nLicense: " + result.get("license");
+            //description_widget.add_attribute_mapping("text", "description");
+            description_widget.add_attribute_value("text", description_text);
 
             var audio_widget = new scopes.lib.PreviewWidget("audio_id", "audio");
             // TODO: refactor this once the bug with add_attribute_value with
@@ -531,17 +537,6 @@ scopes.self.initialize({}, {
                 }
             );
 
-            var reviews_widget = new scopes.lib.PreviewWidget("review_id", "reviews");
-            reviews_widget.add_attribute_value(
-                "reviews",
-                [
-                    {
-                        author: "ricardo",
-                        rating: 3,
-                    },
-                ]
-            )
-
             var actions_widget = new scopes.lib.PreviewWidget("actions_id",
                                                               "actions");
 
@@ -550,43 +545,14 @@ scopes.self.initialize({}, {
             actions_widget.add_attribute_value("actions",
                 {
                     "id": "open",
-                    "label": "Open on freesound.org",
-                    //"uri": result.get("url"),
+                    "label": "Open",
+                    "uri": result.get("url"),
                 }
             );
-
-
-            //// details are:
-            //// * created
-            //// * license
-            //// * tags
-            //// * pack
-            //console.log("pack: " + result.get("pack"));
-
-            var details_widget = new scopes.lib.PreviewWidget("details_id", "expandable");
-            details_widget.add_attribute_value("title", "Details");
-            details_widget.add_attribute_value("collapsed-widgets", 0);
 
             var license_widget = new scopes.lib.PreviewWidget("license_id", "text");
             license_widget.add_attribute_value("title", "License");
             license_widget.add_attribute_value("text", result.get("license"));
-
-            //var sample_tags = result.get("tags");
-            //console.log("sample_tags: " + sample_tags);
-            //console.log("sample_tags string: " + sample_tags.join("\n"));
-            //var tags_widget = new scopes.lib.PreviewWidget("tags_id", "text");
-            //tags_widget.add_attribute_value("title", "Tags");
-            //tags_widget.add_attribute_value("text", sample_tags.join(", "));
-
-            var created_widget = new scopes.lib.PreviewWidget("created_id", "text");
-            created_widget.add_attribute_value("title", "Created");
-            created_widget.add_attribute_value("text", result.get("created"));
-
-
-
-            details_widget.add_widget(license_widget);
-            //details_widget.add_widget(tags_widget);
-            details_widget.add_widget(created_widget);
 
             preview_reply.push([
                 image_widget,
@@ -594,8 +560,7 @@ scopes.self.initialize({}, {
                 audio_widget,
                 description_widget,
                 actions_widget,
-                details_widget,
-                reviews_widget,
+                //license_widget,
             ]);
             preview_reply.finished();
         };
