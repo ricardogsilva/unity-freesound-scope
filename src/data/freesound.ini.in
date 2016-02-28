@@ -9,4 +9,5 @@ LocationDataNeeded = true
 [Appearance]
 PageHeader.Logo = logo.png
 PageHeader.DividerColor = #c23139
+PreviewButtonColor = #c23139
 

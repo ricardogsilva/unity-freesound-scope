@@ -24,6 +24,9 @@ var SOUND_INSTANCE_FIELDS = [
     "images",
     "avg_rating",
     "username",
+    "type",
+    "channels",
+    "filesize",
 ].toString();
 
 // A curated selection of the most used tags on Freesound.org
@@ -428,26 +431,29 @@ scopes.self.initialize({}, {
         var run_preview_cb = function(preview_reply) {
             // layout definition for a screen with only one column
             var layout_1_col = new scopes.lib.ColumnLayout(1);
-            layout_1_col.add_column(["image",
-                                     "header",
-                                     "audio",
-                                     "description",
-                                     "details"]);
+            layout_1_col.add_column(["image_id",
+                                     "header_id",
+                                     "audio_id",
+                                     "description_id",
+                                     "details_id",
+                                     "actions_id"]);
 
             // layout definition for a screen with two columns
             var layout_2_col = new scopes.lib.ColumnLayout(2);
-            layout_2_col.add_column(["image",
-                                     "header",
-                                     "audio",
-                                     "description"]);
+            layout_2_col.add_column(["image_id",
+                                     "header_id",
+                                     "audio_id",
+                                     "description_id",
+                                     "actions_id"]);
             layout_2_col.add_column([]);
 
             // layout definition for a screen with three columns
             var layout_3_col = new scopes.lib.ColumnLayout(3);
-            layout_3_col.add_column(["image",
-                                     "header",
-                                     "audio",
-                                     "description"]);
+            layout_3_col.add_column(["image_id",
+                                     "header_id",
+                                     "audio_id",
+                                     "description_id",
+                                     "actions_id"]);
             layout_3_col.add_column([]);
             layout_3_col.add_column([]);
 
@@ -455,39 +461,61 @@ scopes.self.initialize({}, {
                                            layout_2_col,
                                            layout_3_col]);
 
-            var image = new scopes.lib.PreviewWidget("image", "image");
-            image.add_attribute_mapping("source", "art");
+            var image_widget = new scopes.lib.PreviewWidget("image_id", "image");
+            image_widget.add_attribute_mapping("source", "art");
 
-            var header = new scopes.lib.PreviewWidget("header", "header");
-            header.add_attribute_mapping("title", "title")
-            header.add_attribute_mapping("subtitle", "username")
+            var header_widget = new scopes.lib.PreviewWidget("header_id", "header");
+            header_widget.add_attribute_mapping("title", "title")
+            header_widget.add_attribute_mapping("subtitle", "username")
 
             console.log("scope_directory: " + scopes.self.scope_directory);
 
-            var description = new scopes.lib.PreviewWidget("description",
+            var description_widget = new scopes.lib.PreviewWidget("description_id",
                                                            "text");
-            description.add_attribute_mapping("text", "description");
+            description_widget.add_attribute_mapping("text", "description");
 
-            var details = new scopes.lib.PreviewWidget("details", "table");
-            details.add_attribute_value("title", "Details");
-            details.add_attribute_value(
+            var details_widget = new scopes.lib.PreviewWidget("details_id", "table");
+            details_widget.add_attribute_value("title", "Details");
+            details_widget.add_attribute_value(
                 "values",
                 [
-                    ["type", result.get("type")],
-                    ["channels", result.get("channels")],
-                    ["filesize", result.get("filesize")],
+                    ["type", result.get("all")["type"]],
+                    ["channels", result.get("all")["channels"]],
+                    ["filesize", result.get("all")["filesize"]],
                 ]
             );
-            var audio = new scopes.lib.PreviewWidget("audio", "audio");
-            audio.add_attribute_value(
+            var audio_widget = new scopes.lib.PreviewWidget("audio_id", "audio");
+            audio_widget.add_attribute_value(
                 "tracks",
                 {
                      "title": result.get("title"),
                      "source": result.get("audio_preview"),
                 }
             );
+            console.log("uri: " + result.get("uri"));
+            var actions_widget = new scopes.lib.PreviewWidget("actions_id", "actions");
+            actions_widget.add_attribute_value("actions",
+                [
+                    {
+                        "id": "open",
+                        "label": "Open",
+                        "uri": result.get("all")["url"],
+                    },
+                    {
+                        "id": "similar",
+                        "label": "Similar sounds",
+                    },
+                ]
+            );
 
-            preview_reply.push([image, header, audio, description, details]);
+            preview_reply.push([
+                image_widget,
+                header_widget,
+                audio_widget,
+                description_widget,
+                details_widget,
+                actions_widget
+            ]);
             preview_reply.finished();
         };
         var cancel_preview_cb = function() {};
@@ -495,6 +523,11 @@ scopes.self.initialize({}, {
                                            run_preview_cb,
                                            cancel_preview_cb);
 
+    },
+    performAction: function(result, metadata, widget_id, action_id) {
+        console.log("performAction called");
+        console.log("widget_id: " + widget_id);
+        console.log("action_id: " + action_id);
     },
 
     stop: function() {
