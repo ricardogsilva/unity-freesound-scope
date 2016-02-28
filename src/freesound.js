@@ -1,3 +1,33 @@
+// TODO:
+//
+// * add sample comments in the preview
+//
+// GENERAL REMARKS ON MISSING OR INCORRECT FUNCTIONALITY:
+//
+// There are some bugs in the javascript bindings that are currently
+// available on the phone on the stable channels, namely:
+//
+// * Online accounts are totally broken (seems this was fixed already but not
+//   published yet) and therefore we are not shipping manifest files for
+//   enabling them nor instnatiating them here
+//
+// * PreviewWidgets whose add_attribute_value() method is supposed to accept
+//   an array of objects do not work as documented. Instead they only accept
+//   a single object, thus negating the possibility of adding multiple entries.
+//   This is the case for PreviewWidget of types:
+//
+//   * audio,
+//   * actions,
+//   * table,
+//
+// * PreviewWidgets of type expandable do not work if they contain more than
+//   one widget, which defeats the whole purpose of them being expandable in
+//   the first place
+//
+// * PreviewWidgets of type review do not show up at all in the phone, while
+//   they work just fine on the desktop
+
+
 var scopes = require('unity-js-scopes')
 var http = require('http');
 var url = require('url');
@@ -15,7 +45,9 @@ var SOUND_INSTANCE_FIELDS = [
     "id",
     "url",
     "name",
-    "license",  // maybe this is not needed
+    "license",
+    "tags",
+    "pack",
     "description",
     "created",
     "duration",
@@ -24,9 +56,6 @@ var SOUND_INSTANCE_FIELDS = [
     "images",
     "avg_rating",
     "username",
-    "type",
-    "channels",
-    "filesize",
 ].toString();
 
 // A curated selection of the most used tags on Freesound.org
@@ -54,6 +83,7 @@ var AVAILABLE_PAGE_SIZES = {
     2: 30,
     3: 45
 };
+
 
 var CategoryRenderer = function(search_reply, page_size) {
     var self = this;
@@ -164,10 +194,12 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
     var categorised_result = new scopes.lib.CategorisedResult(self.categories[category_id]);
     categorised_result.set_uri(result.id.toString());
     categorised_result.set_title(result.name);
+    categorised_result.set('url', result.url);
+    categorised_result.set('download', result.download);
     categorised_result.set('username', result.username);
     categorised_result.set('description', result.description);
     categorised_result.set('art', result.images.waveform_l);
-    categorised_result.set('audio_preview', result.previews["preview-lq-mp3"]);
+    //categorised_result.set('audio_preview', result.previews["preview-lq-mp3"]);
     categorised_result.set(
         'quick_preview',
         {
@@ -175,6 +207,10 @@ CategoryRenderer.prototype.render_result = function(result, category_id) {
             "duration": result.duration
         }
     );
+    categorised_result.set('tags', result.tags);
+    categorised_result.set('created', result.created);
+    categorised_result.set('license', result.license);
+    categorised_result.set('pack', result.pack);
     categorised_result.set('all', result);
 
     // these if blocks of code deal with buffering incoming results
@@ -402,13 +438,6 @@ scopes.self.initialize({}, {
                     }
                 }
             })
-            //service_name, service_type, provider_name
-            //var online_account_client = new scopes.lib.OnlineAccountClient(
-            //    "freesound.rgsilva_freesound",
-            //    "freesound-scope",
-            //    "freesound.rgsilva_freesound"
-            //);
-            //console.log("online_account_client: " + online_account_client);
 
             freesound_searcher.retrieve_newest_sounds(canned_query, metadata);
             freesound_searcher.retrieve_most_downloaded_sounds(canned_query, metadata);
@@ -431,29 +460,43 @@ scopes.self.initialize({}, {
         var run_preview_cb = function(preview_reply) {
             // layout definition for a screen with only one column
             var layout_1_col = new scopes.lib.ColumnLayout(1);
-            layout_1_col.add_column(["image_id",
-                                     "header_id",
-                                     "audio_id",
-                                     "description_id",
-                                     "details_id",
-                                     "actions_id"]);
+            layout_1_col.add_column([
+                "image_id",
+                "header_id",
+                "review_id",
+                "actions_id",
+                "audio_id",
+                "details_id",
+                "description_id",
+                //"tags_id",
+            ]);
 
             // layout definition for a screen with two columns
             var layout_2_col = new scopes.lib.ColumnLayout(2);
-            layout_2_col.add_column(["image_id",
-                                     "header_id",
-                                     "audio_id",
-                                     "description_id",
-                                     "actions_id"]);
+            layout_2_col.add_column([
+                "image_id",
+                "header_id",
+                "review_id",
+                "actions_id",
+                "audio_id",
+                "details_id",
+                "description_id",
+                //"tags_id",
+            ]);
             layout_2_col.add_column([]);
 
             // layout definition for a screen with three columns
             var layout_3_col = new scopes.lib.ColumnLayout(3);
-            layout_3_col.add_column(["image_id",
-                                     "header_id",
-                                     "audio_id",
-                                     "description_id",
-                                     "actions_id"]);
+            layout_3_col.add_column([
+                "image_id",
+                "header_id",
+                "review_id",
+                "actions_id",
+                "audio_id",
+                "details_id",
+                "description_id",
+                //"tags_id",
+            ]);
             layout_3_col.add_column([]);
             layout_3_col.add_column([]);
 
@@ -466,55 +509,93 @@ scopes.self.initialize({}, {
 
             var header_widget = new scopes.lib.PreviewWidget("header_id", "header");
             header_widget.add_attribute_mapping("title", "title")
-            header_widget.add_attribute_mapping("subtitle", "username")
+            //header_widget.add_attribute_mapping("subtitle", "username")
+            header_widget.add_attribute_value("subtitle", "👤" + result.get("username"))
 
             console.log("scope_directory: " + scopes.self.scope_directory);
 
             var description_widget = new scopes.lib.PreviewWidget("description_id",
                                                            "text");
+            description_widget.add_attribute_value("title", "Description");
             description_widget.add_attribute_mapping("text", "description");
 
-            var details_widget = new scopes.lib.PreviewWidget("details_id", "table");
-            details_widget.add_attribute_value("title", "Details");
-            details_widget.add_attribute_value(
-                "values",
-                [
-                    ["type", result.get("all")["type"]],
-                    ["channels", result.get("all")["channels"]],
-                    ["filesize", result.get("all")["filesize"]],
-                ]
-            );
             var audio_widget = new scopes.lib.PreviewWidget("audio_id", "audio");
+            // TODO: refactor this once the bug with add_attribute_value with
+            // an array has been fixed and published
             audio_widget.add_attribute_value(
                 "tracks",
                 {
                      "title": result.get("title"),
-                     "source": result.get("audio_preview"),
+                     "source": result.get("quick_preview")["uri"],
+                     "length": Math.floor(result.get("quick_preview")["duration"]),
                 }
             );
-            console.log("uri: " + result.get("uri"));
-            var actions_widget = new scopes.lib.PreviewWidget("actions_id", "actions");
-            actions_widget.add_attribute_value("actions",
+
+            var reviews_widget = new scopes.lib.PreviewWidget("review_id", "reviews");
+            reviews_widget.add_attribute_value(
+                "reviews",
                 [
                     {
-                        "id": "open",
-                        "label": "Open",
-                        "uri": result.get("all")["url"],
-                    },
-                    {
-                        "id": "similar",
-                        "label": "Similar sounds",
+                        author: "ricardo",
+                        rating: 3,
                     },
                 ]
+            )
+
+            var actions_widget = new scopes.lib.PreviewWidget("actions_id",
+                                                              "actions");
+
+            // TODO: refactor this once the bug with add_attribute_value with
+            // an array has been fixed and published
+            actions_widget.add_attribute_value("actions",
+                {
+                    "id": "open",
+                    "label": "Open on freesound.org",
+                    //"uri": result.get("url"),
+                }
             );
+
+
+            //// details are:
+            //// * created
+            //// * license
+            //// * tags
+            //// * pack
+            //console.log("pack: " + result.get("pack"));
+
+            var details_widget = new scopes.lib.PreviewWidget("details_id", "expandable");
+            details_widget.add_attribute_value("title", "Details");
+            details_widget.add_attribute_value("collapsed-widgets", 0);
+
+            var license_widget = new scopes.lib.PreviewWidget("license_id", "text");
+            license_widget.add_attribute_value("title", "License");
+            license_widget.add_attribute_value("text", result.get("license"));
+
+            //var sample_tags = result.get("tags");
+            //console.log("sample_tags: " + sample_tags);
+            //console.log("sample_tags string: " + sample_tags.join("\n"));
+            //var tags_widget = new scopes.lib.PreviewWidget("tags_id", "text");
+            //tags_widget.add_attribute_value("title", "Tags");
+            //tags_widget.add_attribute_value("text", sample_tags.join(", "));
+
+            var created_widget = new scopes.lib.PreviewWidget("created_id", "text");
+            created_widget.add_attribute_value("title", "Created");
+            created_widget.add_attribute_value("text", result.get("created"));
+
+
+
+            details_widget.add_widget(license_widget);
+            //details_widget.add_widget(tags_widget);
+            details_widget.add_widget(created_widget);
 
             preview_reply.push([
                 image_widget,
                 header_widget,
                 audio_widget,
                 description_widget,
+                actions_widget,
                 details_widget,
-                actions_widget
+                reviews_widget,
             ]);
             preview_reply.finished();
         };
@@ -524,8 +605,16 @@ scopes.self.initialize({}, {
                                            cancel_preview_cb);
 
     },
-    performAction: function(result, metadata, widget_id, action_id) {
-        console.log("performAction called");
+    perform_action: function(result, metadata, widget_id, action_id) {
+        console.log("perform_action called");
+        console.log("result:");
+        for (item in result) {
+            console.log("\t" + item + ": " + result[item]);
+        }
+        console.log("metadata:");
+        for (item in metadata) {
+            console.log("\t" + item + ": " + metadata[item]);
+        }
         console.log("widget_id: " + widget_id);
         console.log("action_id: " + action_id);
     },
